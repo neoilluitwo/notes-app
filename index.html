@@ -126,9 +126,21 @@
       #search-tags {
         border: 1.5px solid var(--accent-search);
         box-shadow: 0 0 8px rgba(26,143,255,0.40), 0 0 2px rgba(26,143,255,0.75);
-        cursor: not-allowed;
-        opacity: 0.65;
       }
+      #search-tags:focus {
+        box-shadow: 0 0 14px rgba(26,143,255,0.65), 0 0 3px rgba(26,143,255,1);
+      }
+      .note-card.hidden { display: none; }
+      .empty-search-state {
+        display: none;
+        grid-column: 1 / -1;
+        text-align: center;
+        color: var(--text-muted);
+        padding: 60px 20px;
+        font-size: 13px;
+        letter-spacing: 0.05em;
+      }
+      .empty-search-state.visible { display: block; }
 
       /* ═══════════════════════════════════════════════
          NEW NOTE DROPDOWN
@@ -433,8 +445,8 @@
 
         <!-- Future search -->
         <div class="input-block">
-          <label for="search-tags">Search by Tags — coming soon</label>
-          <input id="search-tags" class="bar-input" type="text" placeholder="Filter by tag…" disabled />
+          <label for="search-tags">Search by Tags</label>
+          <input id="search-tags" class="bar-input" type="text" placeholder="Filter by tag…" />
         </div>
 
       </div>
@@ -455,6 +467,7 @@
 
       <hr class="section-divider" />
       <div id="notes-list"></div>
+      <div class="empty-search-state" id="empty-search">No notes match that tag.</div>
 
     </div>
 
@@ -559,9 +572,39 @@
 
         editCancelBtn.addEventListener('click', closeEditOverlay);
 
+        /* ─── Search by tags ─── */
+        const searchTags   = document.getElementById('search-tags');
+        const emptySearch  = document.getElementById('empty-search');
+
+        searchTags.addEventListener('input', () => {
+          // Split what the user typed into individual search terms
+          const terms = searchTags.value
+            .split(',')
+            .map(t => t.trim().toLowerCase())
+            .filter(Boolean);
+
+          const cards = notesList.querySelectorAll('.note-card');
+          let anyVisible = false;
+
+          cards.forEach(card => {
+            // Each card stores its tags as a comma-separated lowercase string in data-tags
+            const cardTags = card.dataset.tags ? card.dataset.tags.split(',') : [];
+
+            // Show card if it matches ALL typed terms (AND logic)
+            const matches = terms.length === 0 ||
+              terms.every(term => cardTags.some(tag => tag.includes(term)));
+
+            card.classList.toggle('hidden', !matches);
+            if (matches) anyVisible = true;
+          });
+
+          // Show a friendly message if nothing matches
+          emptySearch.classList.toggle('visible', terms.length > 0 && !anyVisible);
+        });
+
         editSaveBtn.addEventListener('click', async () => {
           const newContent = editContent.value.trim();
-          const newTags = editTags.value.split(',').map(t => t.trim()).filter(Boolean);
+          const newTags = parseTags(editTags.value);
           if (!newContent) { editContent.focus(); return; }
 
           const { error } = await supabaseClient
@@ -590,9 +633,7 @@
           }
 
           notes.forEach(note => {
-            const tagsArray = Array.isArray(note.tags)
-              ? note.tags.filter(Boolean)
-              : (note.tags || '').split(',').map(t => t.trim()).filter(Boolean);
+            const tagsArray = parseTags(note.tags);
 
             const card = document.createElement('div');
             card.className = 'note-card';
@@ -620,6 +661,25 @@
           const { error } = await supabaseClient.from('notes').delete().eq('id', id);
           if (error) { console.log(error); alert('Error deleting note'); return; }
           loadNotes();
+        }
+
+        /* ─── Parse tags from any format Supabase might return ─── */
+        function parseTags(raw) {
+          if (Array.isArray(raw)) return raw.map(t => String(t).trim()).filter(Boolean);
+          if (!raw) return [];
+          let str = String(raw).trim();
+          // Unwrap any number of JSON-encoding layers (e.g. "[\"Badass\"]", "[[...]]")
+          while (str.startsWith('[') || str.startsWith('"')) {
+            try {
+              const parsed = JSON.parse(str);
+              if (Array.isArray(parsed)) return parsed.map(t => String(t).trim()).filter(Boolean);
+              if (typeof parsed === 'string') { str = parsed; continue; }
+              break;
+            } catch { break; }
+          }
+          // Postgres array literal {tag1,tag2}
+          str = str.replace(/^\{|\}$/g, '');
+          return str.split(',').map(t => t.trim().replace(/^"|"$/g, '')).filter(Boolean);
         }
 
         /* ─── Utility ─── */

@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <script src="https://unpkg.com/@supabase/supabase-js@2.105.3"></script>
+    <script>
+      const { createClient } = supabase;
+      const supabaseClient = createClient(
+        'https://qogfdwubvkjwaqwqjbvj.supabase.co',
+        'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBubWdtaGx5Y2xlbXV5ZmtxYWFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyNDgwMTEsImV4cCI6MjA5MzgyNDAxMX0.6pL1l4NBCUt8AVRO6sVpLpf9TNIAoON5A-ArWbddA0Y'
+      );
+    </script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Sign Up — My Notes</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet" />
+    <style>
+      :root {
+        --bg-page:      #0e0e10;
+        --bg-card:      #161618;
+        --bg-input:     #1e1e22;
+
+        --accent:       #1fd670;
+        --accent-glow:  rgba(31,214,112,0.5);
+        --accent-dim:   rgba(31,214,112,0.12);
+
+        --text-primary:  #f0f0f0;
+        --text-secondary:#888;
+        --text-muted:    #555;
+
+        --radius: 10px;
+        --transition: 0.2s ease;
+
+        --page-border-color: #1fd670;
+      }
+
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        background: var(--bg-page);
+        color: var(--text-primary);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 14px;
+        min-height: 100vh;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        outline: 2px solid var(--page-border-color);
+        outline-offset: -6px;
+      }
+
+      .card {
+        background: var(--bg-card);
+        border: 1.5px solid var(--accent);
+        border-radius: var(--radius);
+        padding: 40px 36px;
+        width: min(420px, 90vw);
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        box-shadow: 0 0 24px var(--accent-glow), 0 0 60px rgba(31,214,112,0.15), 0 0 80px rgba(0,0,0,0.6);
+      }
+
+      /* Header */
+      .card-header { text-align: center; display: flex; flex-direction: column; gap: 6px; }
+      .card-header h1 {
+        font-family: 'Syne', sans-serif;
+        font-size: 1.9rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        background: linear-gradient(135deg, var(--text-primary) 40%, var(--text-secondary));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+      .card-header p {
+        font-size: 12px;
+        color: var(--text-muted);
+        letter-spacing: 0.04em;
+      }
+
+      /* Fields */
+      .fields { display: flex; flex-direction: column; gap: 14px; }
+
+      .field { display: flex; flex-direction: column; gap: 6px; }
+      .field label {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+      .field input {
+        background: var(--bg-input);
+        color: var(--text-primary);
+        border: 1.5px solid rgba(31,214,112,0.55);
+        box-shadow: 0 0 6px rgba(31,214,112,0.2);
+        border-radius: var(--radius);
+        padding: 12px 16px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 13px;
+        outline: none;
+        transition: border-color var(--transition), box-shadow var(--transition);
+        width: 100%;
+      }
+      .field input::placeholder { color: var(--text-muted); }
+      .field input:focus {
+        border-color: var(--accent);
+        box-shadow: 0 0 14px var(--accent-glow), 0 0 3px rgba(31,214,112,0.9);
+      }
+
+      /* Button */
+      .btn-signup {
+        width: 100%;
+        background: var(--accent);
+        color: #0e0e10;
+        border: none;
+        border-radius: var(--radius);
+        padding: 13px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        cursor: pointer;
+        box-shadow: 0 0 14px var(--accent-glow);
+        transition: filter var(--transition), transform var(--transition);
+      }
+      .btn-signup:hover { filter: brightness(1.15); transform: translateY(-1px); }
+      .btn-signup:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+      /* Messages */
+      .message {
+        display: none;
+        font-size: 12px;
+        letter-spacing: 0.04em;
+        padding: 12px 14px;
+        border-radius: calc(var(--radius) - 2px);
+        text-align: center;
+      }
+      .message.success {
+        display: block;
+        background: rgba(31,214,112,0.1);
+        border: 1px solid rgba(31,214,112,0.35);
+        color: #1fd670;
+      }
+      .message.error {
+        display: block;
+        background: rgba(255,26,60,0.1);
+        border: 1px solid rgba(255,26,60,0.35);
+        color: #ff1a3c;
+      }
+
+      /* Footer link */
+      .card-footer {
+        text-align: center;
+        font-size: 11px;
+        color: var(--text-muted);
+      }
+      .card-footer a {
+        color: var(--accent);
+        text-decoration: none;
+        text-shadow: 0 0 6px rgba(31,214,112,0.5);
+        transition: opacity var(--transition);
+      }
+      .card-footer a:hover { opacity: 0.75; }
+    </style>
+    <script>
+      /* Random vivid page border on each load */
+      (function () {
+        const vivid = [
+          [0,100,55],[20,100,55],[40,100,50],[75,100,45],[120,100,45],
+          [160,100,48],[185,100,50],[210,100,58],[240,100,62],[270,100,60],
+          [300,100,55],[330,100,55],
+        ];
+        const [h, s, l] = vivid[Math.floor(Math.random() * vivid.length)];
+        document.documentElement.style.setProperty('--page-border-color', `hsl(${h},${s}%,${l}%)`);
+      })();
+    </script>
+  </head>
+  <body>
+
+    <div class="card">
+
+      <div class="card-header">
+        <h1>My Notes</h1>
+        <p>Create an account to get started</p>
+      </div>
+
+      <div class="fields">
+        <div class="field">
+          <label for="email">Email</label>
+          <input id="email" type="email" placeholder="you@example.com" />
+        </div>
+        <div class="field">
+          <label for="password">Password</label>
+          <input id="password" type="password" placeholder="Min. 6 characters" />
+        </div>
+      </div>
+
+      <div id="message" class="message"></div>
+
+      <button class="btn-signup" id="signup-btn">Sign Up</button>
+
+      <div class="card-footer">
+        Already have an account? <a href="index.html">Go to Notes</a>
+      </div>
+
+    </div>
+
+    <script>
+      document.addEventListener('DOMContentLoaded', () => {
+        const emailInput  = document.getElementById('email');
+        const passInput   = document.getElementById('password');
+        const signupBtn   = document.getElementById('signup-btn');
+        const message     = document.getElementById('message');
+
+        function showMessage(text, type) {
+          message.textContent = text;
+          message.className = `message ${type}`;
+        }
+
+        signupBtn.addEventListener('click', async () => {
+          const email    = emailInput.value.trim();
+          const password = passInput.value;
+
+          if (!email || !password) {
+            showMessage('Please fill in both fields.', 'error');
+            return;
+          }
+          if (password.length < 6) {
+            showMessage('Password must be at least 6 characters.', 'error');
+            return;
+          }
+
+          signupBtn.disabled = true;
+          signupBtn.textContent = 'Signing up…';
+
+          const { error } = await supabaseClient.auth.signUp({ email, password });
+
+          if (error) {
+            showMessage(error.message, 'error');
+            signupBtn.disabled = false;
+            signupBtn.textContent = 'Sign Up';
+          } else {
+            showMessage('Account created! Redirecting…', 'success');
+            setTimeout(() => { window.location.href = 'index.html'; }, 2000);
+          }
+        });
+
+        /* Allow Enter key to submit */
+        [emailInput, passInput].forEach(el => {
+          el.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter') signupBtn.click();
+          });
+        });
+      });
+    </script>
+
+  </body>
+</html>
