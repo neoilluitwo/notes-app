@@ -1,0 +1,636 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <script src="https://unpkg.com/@supabase/supabase-js@2.105.3"></script>
+    <script>
+      const { createClient } = supabase;
+      const supabaseClient = createClient(
+          'https://pnmgmhlyclemuyfkqaai.supabase.co',
+          'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBubWdtaGx5Y2xlbXV5ZmtxYWFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyNDgwMTEsImV4cCI6MjA5MzgyNDAxMX0.6pL1l4NBCUt8AVRO6sVpLpf9TNIAoON5A-ArWbddA0Y'
+      );
+    </script>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>My Notes</title>
+    <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet" />
+    <style>
+      /* ═══════════════════════════════════════════════
+         CSS VARIABLES — tweak everything from here
+      ═══════════════════════════════════════════════ */
+      :root {
+        --bg-page:        #0e0e10;
+        --bg-card:        #161618;
+        --bg-input:       #1e1e22;
+
+        --accent-new:     #ff1a3c;
+        --accent-search:  #1a8fff;
+
+        --text-primary:   #f0f0f0;
+        --text-secondary: #888;
+        --text-muted:     #555;
+
+        --border-card:    1px solid rgba(255,255,255,0.07);
+        --radius:         10px;
+
+        --page-border-color: #ff1a3c;
+        --divider-alpha: 0.30;   /* ← easy knob */
+
+        --transition: 0.2s ease;
+      }
+
+      *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+      body {
+        background: var(--bg-page);
+        color: var(--text-primary);
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 14px;
+        min-height: 100vh;
+        outline: 2px solid var(--page-border-color);
+        outline-offset: -6px;
+      }
+
+      .page-wrapper {
+        max-width: 900px;
+        margin: 0 auto;
+        padding: 40px 24px 80px;
+      }
+
+      /* ── Header ── */
+      header { text-align: center; margin-bottom: 40px; }
+      header h1 {
+        font-family: 'Syne', sans-serif;
+        font-size: 2.4rem;
+        font-weight: 800;
+        letter-spacing: -0.02em;
+        background: linear-gradient(135deg, var(--text-primary) 40%, var(--text-secondary));
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      /* ── Top bar ── */
+      .top-bar {
+        display: flex;
+        gap: 16px;
+        justify-content: center;
+        align-items: flex-start;
+        margin-bottom: 12px;
+      }
+
+      .input-block {
+        flex: 1;
+        max-width: 420px;
+        position: relative;
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+      .input-block label {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+
+      .bar-input {
+        width: 100%;
+        background: var(--bg-input);
+        color: var(--text-primary);
+        border-radius: var(--radius);
+        padding: 12px 16px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 13px;
+        outline: none;
+        transition: border-color var(--transition), box-shadow var(--transition), border-radius var(--transition);
+        cursor: text;
+      }
+      .bar-input::placeholder { color: var(--text-muted); }
+
+      /* Neon red — new note */
+      #note-tags {
+        border: 1.5px solid var(--accent-new);
+        box-shadow: 0 0 8px rgba(255,26,60,0.45), 0 0 2px rgba(255,26,60,0.8);
+      }
+      #note-tags:focus {
+        box-shadow: 0 0 14px rgba(255,26,60,0.65), 0 0 3px rgba(255,26,60,1);
+      }
+      #note-tags.expanded {
+        border-radius: var(--radius) var(--radius) 0 0;
+        border-bottom-color: var(--bg-card);
+        box-shadow: 0 0 14px rgba(255,26,60,0.65), 0 0 3px rgba(255,26,60,1);
+      }
+
+      /* Neon blue — search */
+      #search-tags {
+        border: 1.5px solid var(--accent-search);
+        box-shadow: 0 0 8px rgba(26,143,255,0.40), 0 0 2px rgba(26,143,255,0.75);
+        cursor: not-allowed;
+        opacity: 0.65;
+      }
+
+      /* ═══════════════════════════════════════════════
+         NEW NOTE DROPDOWN
+         Anchored directly below the red tags input.
+         Floats over the page — nothing underneath is blocked.
+      ═══════════════════════════════════════════════ */
+      #new-note-block { position: relative; }
+
+      .note-dropdown {
+        display: none;
+        position: absolute;
+        top: 100%;
+        left: 0;
+        width: 100%;
+        z-index: 100;
+        background: var(--bg-card);
+        border: 1.5px solid var(--accent-new);
+        border-top: none;
+        border-radius: 0 0 var(--radius) var(--radius);
+        box-shadow: 0 0 14px rgba(255,26,60,0.35), 0 12px 40px rgba(0,0,0,0.55);
+        padding: 12px 14px 14px;
+        flex-direction: column;
+        gap: 10px;
+        animation: dropOpen 0.15s ease;
+      }
+      .note-dropdown.open { display: flex; }
+      @keyframes dropOpen {
+        from { opacity: 0; transform: translateY(-4px); }
+        to   { opacity: 1; transform: translateY(0); }
+      }
+
+      #note-content {
+        width: 100%;
+        background: var(--bg-input);
+        color: var(--text-primary);
+        border: 1.5px solid rgba(255,26,60,0.35);
+        border-radius: calc(var(--radius) - 2px);
+        padding: 12px 14px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 13px;
+        resize: vertical;
+        min-height: 110px;
+        outline: none;
+        transition: border-color var(--transition), box-shadow var(--transition);
+      }
+      #note-content:focus {
+        border-color: var(--accent-new);
+        box-shadow: 0 0 6px rgba(255,26,60,0.3);
+      }
+      #note-content::placeholder { color: var(--text-muted); }
+
+      .dropdown-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
+      /* ── Edit backdrop ── */
+      #edit-backdrop {
+        display: none;
+        position: fixed;
+        inset: 0;
+        z-index: 199;
+        background: rgba(0,0,0,0.55);
+        animation: fadeIn 0.2s ease;
+      }
+      #edit-backdrop.open { display: block; }
+      @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+      /* ═══════════════════════════════════════════════
+         EDIT OVERLAY
+         Separate fixed panel, only appears when editing.
+         No backdrop — page stays fully interactive.
+      ═══════════════════════════════════════════════ */
+      #edit-overlay {
+        display: none;
+        position: fixed;
+        top: 120px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: min(480px, 90vw);
+        z-index: 200;
+        background: var(--bg-card);
+        border: 1.5px solid var(--accent-search);
+        box-shadow: 0 0 20px rgba(26,143,255,0.4), 0 16px 48px rgba(0,0,0,0.7);
+        border-radius: var(--radius);
+        padding: 18px;
+        flex-direction: column;
+        gap: 12px;
+        animation: editOpen 0.15s ease;
+      }
+      #edit-overlay.open { display: flex; }
+      @keyframes editOpen {
+        from { opacity: 0; transform: translateX(-50%) translateY(-8px); }
+        to   { opacity: 1; transform: translateX(-50%) translateY(0); }
+      }
+
+      .edit-overlay-label {
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: var(--text-muted);
+      }
+
+      #edit-tags {
+        width: 100%;
+        background: var(--bg-input);
+        color: var(--text-primary);
+        border: 1.5px solid rgba(26,143,255,0.4);
+        border-radius: calc(var(--radius) - 2px);
+        padding: 10px 14px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 13px;
+        outline: none;
+        transition: border-color var(--transition);
+      }
+      #edit-tags:focus {
+        border-color: var(--accent-search);
+        box-shadow: 0 0 6px rgba(26,143,255,0.3);
+      }
+      #edit-tags::placeholder { color: var(--text-muted); }
+
+      #edit-content {
+        width: 100%;
+        background: var(--bg-input);
+        color: var(--text-primary);
+        border: 1.5px solid rgba(26,143,255,0.4);
+        border-radius: calc(var(--radius) - 2px);
+        padding: 12px 14px;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 13px;
+        resize: vertical;
+        min-height: 130px;
+        outline: none;
+        transition: border-color var(--transition);
+      }
+      #edit-content:focus {
+        border-color: var(--accent-search);
+        box-shadow: 0 0 6px rgba(26,143,255,0.3);
+      }
+      #edit-content::placeholder { color: var(--text-muted); }
+
+      .edit-actions {
+        display: flex;
+        gap: 8px;
+        justify-content: flex-end;
+      }
+
+      /* ── Buttons ── */
+      .btn {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        padding: 8px 18px;
+        border-radius: 6px;
+        border: none;
+        cursor: pointer;
+        transition: all var(--transition);
+      }
+      .btn-primary {
+        background: var(--accent-new);
+        color: #fff;
+        box-shadow: 0 0 10px rgba(255,26,60,0.5);
+      }
+      .btn-primary:hover { filter: brightness(1.15); transform: translateY(-1px); }
+
+      .btn-primary-blue {
+        background: var(--accent-search);
+        color: #fff;
+        box-shadow: 0 0 10px rgba(26,143,255,0.5);
+      }
+      .btn-primary-blue:hover { filter: brightness(1.15); transform: translateY(-1px); }
+
+      .btn-ghost {
+        background: transparent;
+        color: var(--text-secondary);
+        border: 1px solid rgba(255,255,255,0.1);
+      }
+      .btn-ghost:hover { color: var(--text-primary); border-color: rgba(255,255,255,0.25); }
+
+      .btn-card-action {
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        padding: 5px 12px;
+        border-radius: 4px;
+        border: none;
+        cursor: pointer;
+        transition: all var(--transition);
+      }
+      .btn-delete {
+        background: rgba(255,26,60,0.1);
+        color: var(--accent-new);
+        border: 1px solid rgba(255,26,60,0.35);
+        text-shadow: 0 0 6px rgba(255,26,60,0.5);
+      }
+      .btn-delete:hover { background: rgba(255,26,60,0.22); box-shadow: 0 0 8px rgba(255,26,60,0.35); }
+
+      .btn-edit {
+        background: rgba(26,143,255,0.1);
+        color: var(--accent-search);
+        border: 1px solid rgba(26,143,255,0.35);
+        text-shadow: 0 0 6px rgba(26,143,255,0.5);
+      }
+      .btn-edit:hover { background: rgba(26,143,255,0.22); box-shadow: 0 0 8px rgba(26,143,255,0.35); }
+
+      /* ── Divider ── */
+      .section-divider {
+        height: 1px;
+        background: var(--divider-color, rgba(255,255,255,0.30));
+        margin: 36px 0 32px;
+        border: none;
+      }
+
+      /* ── Notes grid ── */
+      #notes-list {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+        gap: 16px;
+      }
+
+      .note-card {
+        background: var(--bg-card);
+        border: var(--border-card);
+        border-radius: var(--radius);
+        padding: 16px;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+        transition: transform var(--transition), box-shadow var(--transition), border-color var(--transition);
+      }
+      .note-card:hover {
+        transform: translateY(-3px);
+        box-shadow: 0 8px 32px rgba(0,0,0,0.4);
+        border-color: rgba(255,255,255,0.14);
+      }
+
+      .card-actions { display: flex; gap: 8px; align-items: center; }
+
+      .card-content {
+        color: var(--text-primary);
+        line-height: 1.65;
+        font-size: 13px;
+        flex: 1;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+
+      .card-tags { display: flex; flex-wrap: wrap; gap: 6px; margin-top: auto; }
+      .tag-pill {
+        font-size: 10px;
+        font-weight: 600;
+        letter-spacing: 0.08em;
+        text-transform: lowercase;
+        padding: 3px 10px;
+        border-radius: 999px;
+        background: rgba(255,255,255,0.06);
+        color: var(--text-secondary);
+        border: 1px solid rgba(255,255,255,0.09);
+      }
+
+      .empty-state {
+        grid-column: 1 / -1;
+        text-align: center;
+        color: var(--text-muted);
+        padding: 60px 20px;
+        font-size: 13px;
+        letter-spacing: 0.05em;
+      }
+
+      @media (max-width: 600px) {
+        .top-bar { flex-direction: column; align-items: stretch; }
+        .input-block { max-width: 100%; }
+        header h1 { font-size: 1.8rem; }
+      }
+    </style>
+  </head>
+  <body>
+    <div class="page-wrapper">
+
+      <header><h1>My Notes</h1></header>
+
+      <div class="top-bar">
+
+        <!-- New note: tag input + anchored dropdown -->
+        <div class="input-block" id="new-note-block">
+          <label for="note-tags">New Note — click to add</label>
+          <input id="note-tags" class="bar-input" type="text" placeholder="Tags (e.g. work, ideas)…" />
+          <div class="note-dropdown" id="note-dropdown">
+            <textarea id="note-content" placeholder="Write your note here…"></textarea>
+            <div class="dropdown-actions">
+              <button class="btn btn-ghost" id="cancel-btn">Cancel</button>
+              <button class="btn btn-primary" id="save-btn">Save Note</button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Future search -->
+        <div class="input-block">
+          <label for="search-tags">Search by Tags — coming soon</label>
+          <input id="search-tags" class="bar-input" type="text" placeholder="Filter by tag…" disabled />
+        </div>
+
+      </div>
+
+      <!-- Edit backdrop -->
+      <div id="edit-backdrop"></div>
+
+      <!-- Edit overlay — separate from the new-note dropdown -->
+      <div id="edit-overlay">
+        <span class="edit-overlay-label">Editing Note</span>
+        <input id="edit-tags" type="text" placeholder="Tags (comma-separated)…" />
+        <textarea id="edit-content" placeholder="Note content…"></textarea>
+        <div class="edit-actions">
+          <button class="btn btn-ghost" id="edit-cancel-btn">Cancel</button>
+          <button class="btn btn-primary-blue" id="edit-save-btn">Save Changes</button>
+        </div>
+      </div>
+
+      <hr class="section-divider" />
+      <div id="notes-list"></div>
+
+    </div>
+
+    <script>
+      /* ─── Random vivid border ─── */
+      (function () {
+        const vivid = [
+          [0,100,55],[20,100,55],[40,100,50],[75,100,45],[120,100,45],
+          [160,100,48],[185,100,50],[210,100,58],[240,100,62],[270,100,60],
+          [300,100,55],[330,100,55],
+        ];
+        const [h, s, l] = vivid[Math.floor(Math.random() * vivid.length)];
+        document.documentElement.style.setProperty('--page-border-color', `hsl(${h},${s}%,${l}%)`);
+        const alpha = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--divider-alpha')) || 0.30;
+        document.documentElement.style.setProperty('--divider-color', `hsla(${h},${s}%,${l}%,${alpha})`);
+      })();
+
+      document.addEventListener('DOMContentLoaded', () => {
+        const noteTags    = document.getElementById('note-tags');
+        const noteContent = document.getElementById('note-content');
+        const dropdown    = document.getElementById('note-dropdown');
+        const saveBtn     = document.getElementById('save-btn');
+        const cancelBtn   = document.getElementById('cancel-btn');
+        const notesList   = document.getElementById('notes-list');
+
+        const editOverlay  = document.getElementById('edit-overlay');
+        const editTags     = document.getElementById('edit-tags');
+        const editContent  = document.getElementById('edit-content');
+        const editSaveBtn  = document.getElementById('edit-save-btn');
+        const editCancelBtn= document.getElementById('edit-cancel-btn');
+
+        /* ─── New-note dropdown ─── */
+        let dropdownOpen = false;
+
+        function openDropdown() {
+          if (dropdownOpen) return;
+          dropdownOpen = true;
+          dropdown.classList.add('open');
+          noteTags.classList.add('expanded');
+        }
+
+        function closeDropdown() {
+          if (!dropdownOpen) return;
+          dropdownOpen = false;
+          dropdown.classList.remove('open');
+          noteTags.classList.remove('expanded');
+        }
+
+        noteTags.addEventListener('focus', openDropdown);
+        noteTags.addEventListener('click', openDropdown);
+
+        cancelBtn.addEventListener('click', (e) => {
+          e.stopPropagation();
+          noteContent.value = '';
+          noteTags.value = '';
+          closeDropdown();
+        });
+
+        document.addEventListener('click', (e) => {
+          if (!document.getElementById('new-note-block').contains(e.target) &&
+              !editOverlay.contains(e.target)) {
+            closeDropdown();
+          }
+        });
+
+        /* ─── Save new note ─── */
+        saveBtn.addEventListener('click', async () => {
+          const content = noteContent.value.trim();
+          const tags = noteTags.value.split(',').map(t => t.trim()).filter(Boolean);
+          if (!content) { noteContent.focus(); return; }
+
+          const { error } = await supabaseClient.from('notes').insert({ content, tags });
+          if (error) { console.log(error); return; }
+
+          noteContent.value = '';
+          noteTags.value = '';
+          closeDropdown();
+          loadNotes();
+        });
+
+        /* ─── Edit overlay ─── */
+        let currentEditId = null;
+
+        const editBackdrop = document.getElementById('edit-backdrop');
+
+        function openEditOverlay(id, content, tags) {
+          currentEditId = id;
+          editContent.value = content;
+          editTags.value = tags.join(', ');
+          editBackdrop.classList.add('open');
+          editOverlay.classList.add('open');
+          editContent.focus();
+        }
+
+        function closeEditOverlay() {
+          currentEditId = null;
+          editBackdrop.classList.remove('open');
+          editOverlay.classList.remove('open');
+          editContent.value = '';
+          editTags.value = '';
+        }
+
+        editCancelBtn.addEventListener('click', closeEditOverlay);
+
+        editSaveBtn.addEventListener('click', async () => {
+          const newContent = editContent.value.trim();
+          const newTags = editTags.value.split(',').map(t => t.trim()).filter(Boolean);
+          if (!newContent) { editContent.focus(); return; }
+
+          const { error } = await supabaseClient
+            .from('notes')
+            .update({ content: newContent, tags: newTags })
+            .eq('id', currentEditId);
+
+          if (error) { console.log(error); return; }
+
+          closeEditOverlay();
+          loadNotes();
+        });
+
+        /* ─── Load notes ─── */
+        async function loadNotes() {
+          const { data: notes, error } = await supabaseClient
+            .from('notes').select('*').order('created_at', { ascending: false });
+
+          if (error) { console.log(error); return; }
+
+          notesList.innerHTML = '';
+
+          if (!notes || notes.length === 0) {
+            notesList.innerHTML = '<div class="empty-state">No notes yet — add one above.</div>';
+            return;
+          }
+
+          notes.forEach(note => {
+            const tagsArray = Array.isArray(note.tags)
+              ? note.tags.filter(Boolean)
+              : (note.tags || '').split(',').map(t => t.trim()).filter(Boolean);
+
+            const card = document.createElement('div');
+            card.className = 'note-card';
+            card.dataset.tags = tagsArray.join(',').toLowerCase();
+
+            card.innerHTML = `
+              <div class="card-actions">
+                <button class="btn-card-action btn-delete">Delete</button>
+                <button class="btn-card-action btn-edit">Edit</button>
+              </div>
+              <div class="card-content">${escapeHtml(note.content)}</div>
+              <div class="card-tags">
+                ${tagsArray.map(t => `<span class="tag-pill">${escapeHtml(t)}</span>`).join('')}
+              </div>`;
+
+            card.querySelector('.btn-delete').addEventListener('click', () => deleteNote(note.id));
+            card.querySelector('.btn-edit').addEventListener('click', () => openEditOverlay(note.id, note.content, tagsArray));
+            notesList.appendChild(card);
+          });
+        }
+
+        /* ─── Delete note ─── */
+        async function deleteNote(id) {
+          if (!confirm('Are you sure you want to delete this note?')) return;
+          const { error } = await supabaseClient.from('notes').delete().eq('id', id);
+          if (error) { console.log(error); alert('Error deleting note'); return; }
+          loadNotes();
+        }
+
+        /* ─── Utility ─── */
+        function escapeHtml(str) {
+          return String(str)
+            .replace(/&/g,'&amp;').replace(/</g,'&lt;')
+            .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+        }
+
+        loadNotes();
+      });
+    </script>
+  </body>
+</html>
