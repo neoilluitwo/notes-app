@@ -11,7 +11,7 @@
     </script>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Sign Up — My Notes</title>
+    <title>My Notes — Auth</title>
     <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500;700&family=Syne:wght@400;600;800&display=swap" rel="stylesheet" />
     <style>
       :root {
@@ -19,9 +19,13 @@
         --bg-card:      #161618;
         --bg-input:     #1e1e22;
 
-        --accent:       #1fd670;
-        --accent-glow:  rgba(31,214,112,0.5);
-        --accent-dim:   rgba(31,214,112,0.12);
+        --accent:       #00ff7f;
+        --accent-glow:  rgba(0,255,127,0.55);
+        --accent-dim:   rgba(0,255,127,0.1);
+
+        --accent-purple:      #bf00ff;
+        --accent-purple-glow: rgba(191,0,255,0.55);
+        --accent-purple-dim:  rgba(191,0,255,0.1);
 
         --text-primary:  #f0f0f0;
         --text-secondary:#888;
@@ -29,8 +33,15 @@
 
         --radius: 10px;
         --transition: 0.2s ease;
-
         --page-border-color: #1fd670;
+
+        /* Active theme vars — swapped by JS on mode change */
+        --active-accent:      #00ff7f;
+        --active-glow:        rgba(0,255,127,0.55);
+        --active-glow-wide:   rgba(0,255,127,0.15);
+        --active-glow-soft:   rgba(0,255,127,0.25);
+        --active-accent-mid:  rgba(0,255,127,0.6);
+        --active-dim:         rgba(0,255,127,0.1);
       }
 
       *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -50,17 +61,17 @@
 
       .card {
         background: var(--bg-card);
-        border: 1.5px solid var(--accent);
+        border: 1.5px solid var(--active-accent);
         border-radius: var(--radius);
         padding: 40px 36px;
         width: min(420px, 90vw);
         display: flex;
         flex-direction: column;
         gap: 24px;
-        box-shadow: 0 0 24px var(--accent-glow), 0 0 60px rgba(31,214,112,0.15), 0 0 80px rgba(0,0,0,0.6);
+        box-shadow: 0 0 24px var(--active-glow), 0 0 60px var(--active-glow-wide), 0 0 80px rgba(0,0,0,0.6);
       }
 
-      /* Header */
+      /* ── Header ── */
       .card-header { text-align: center; display: flex; flex-direction: column; gap: 6px; }
       .card-header h1 {
         font-family: 'Syne', sans-serif;
@@ -78,7 +89,36 @@
         letter-spacing: 0.04em;
       }
 
-      /* Fields */
+      /* ── Mode toggle tabs ── */
+      .tabs {
+        display: flex;
+        border-radius: var(--radius);
+        overflow: hidden;
+        border: 1px solid rgba(255,255,255,0.07);
+      }
+      .tab {
+        flex: 1;
+        padding: 10px;
+        text-align: center;
+        font-family: 'JetBrains Mono', monospace;
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.1em;
+        text-transform: uppercase;
+        cursor: pointer;
+        background: transparent;
+        color: var(--text-muted);
+        border: none;
+        transition: background var(--transition), color var(--transition);
+      }
+      .tab.active {
+        background: var(--active-dim);
+        color: var(--active-accent);
+        text-shadow: 0 0 8px var(--active-glow);
+      }
+      .tab:not(.active):hover { color: var(--text-secondary); }
+
+      /* ── Fields ── */
       .fields { display: flex; flex-direction: column; gap: 14px; }
 
       .field { display: flex; flex-direction: column; gap: 6px; }
@@ -92,8 +132,8 @@
       .field input {
         background: var(--bg-input);
         color: var(--text-primary);
-        border: 1.5px solid rgba(31,214,112,0.55);
-        box-shadow: 0 0 6px rgba(31,214,112,0.2);
+        border: 1.5px solid var(--active-accent-mid);
+        box-shadow: 0 0 6px var(--active-glow-soft);
         border-radius: var(--radius);
         padding: 12px 16px;
         font-family: 'JetBrains Mono', monospace;
@@ -104,14 +144,14 @@
       }
       .field input::placeholder { color: var(--text-muted); }
       .field input:focus {
-        border-color: var(--accent);
-        box-shadow: 0 0 14px var(--accent-glow), 0 0 3px rgba(31,214,112,0.9);
+        border-color: var(--active-accent);
+        box-shadow: 0 0 14px var(--active-glow), 0 0 3px var(--active-accent);
       }
 
-      /* Button */
-      .btn-signup {
+      /* ── Submit button ── */
+      .btn-submit {
         width: 100%;
-        background: var(--accent);
+        background: var(--active-accent);
         color: #0e0e10;
         border: none;
         border-radius: var(--radius);
@@ -122,13 +162,13 @@
         letter-spacing: 0.1em;
         text-transform: uppercase;
         cursor: pointer;
-        box-shadow: 0 0 14px var(--accent-glow);
+        box-shadow: 0 0 14px var(--active-glow);
         transition: filter var(--transition), transform var(--transition);
       }
-      .btn-signup:hover { filter: brightness(1.15); transform: translateY(-1px); }
-      .btn-signup:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+      .btn-submit:hover { filter: brightness(1.15); transform: translateY(-1px); }
+      .btn-submit:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
 
-      /* Messages */
+      /* ── Messages ── */
       .message {
         display: none;
         font-size: 12px;
@@ -150,22 +190,21 @@
         color: #ff1a3c;
       }
 
-      /* Footer link */
+      /* ── Footer ── */
       .card-footer {
         text-align: center;
         font-size: 11px;
         color: var(--text-muted);
       }
       .card-footer a {
-        color: var(--accent);
+        color: var(--active-accent);
         text-decoration: none;
-        text-shadow: 0 0 6px rgba(31,214,112,0.5);
+        text-shadow: 0 0 6px var(--active-glow-soft);
         transition: opacity var(--transition);
       }
       .card-footer a:hover { opacity: 0.75; }
     </style>
     <script>
-      /* Random vivid page border on each load */
       (function () {
         const vivid = [
           [0,100,55],[20,100,55],[40,100,50],[75,100,45],[120,100,45],
@@ -183,7 +222,13 @@
 
       <div class="card-header">
         <h1>My Notes</h1>
-        <p>Create an account to get started</p>
+        <p id="card-subtitle">Create an account to get started</p>
+      </div>
+
+      <!-- Sign up / Log in toggle -->
+      <div class="tabs">
+        <button class="tab active" id="tab-signup">Sign Up</button>
+        <button class="tab" id="tab-login">Log In</button>
       </div>
 
       <div class="fields">
@@ -199,10 +244,11 @@
 
       <div id="message" class="message"></div>
 
-      <button class="btn-signup" id="signup-btn">Sign Up</button>
+      <button class="btn-submit" id="submit-btn">Sign Up</button>
 
       <div class="card-footer">
-        Already have an account? <a href="index.html">Go to Notes</a>
+        <span id="footer-text">Already have an account?</span>
+        <a href="#" id="footer-link">Log in instead</a>
       </div>
 
     </div>
@@ -211,15 +257,76 @@
       document.addEventListener('DOMContentLoaded', () => {
         const emailInput  = document.getElementById('email');
         const passInput   = document.getElementById('password');
-        const signupBtn   = document.getElementById('signup-btn');
+        const submitBtn   = document.getElementById('submit-btn');
         const message     = document.getElementById('message');
+        const tabSignup   = document.getElementById('tab-signup');
+        const tabLogin    = document.getElementById('tab-login');
+        const subtitle    = document.getElementById('card-subtitle');
+        const footerText  = document.getElementById('footer-text');
+        const footerLink  = document.getElementById('footer-link');
+
+        let mode = 'signup'; // 'signup' | 'login'
+
+        const root = document.documentElement;
+
+        function applyTheme(theme) {
+          if (theme === 'green') {
+            root.style.setProperty('--active-accent',     '#00ff7f');
+            root.style.setProperty('--active-glow',       'rgba(0,255,127,0.55)');
+            root.style.setProperty('--active-glow-wide',  'rgba(0,255,127,0.15)');
+            root.style.setProperty('--active-glow-soft',  'rgba(0,255,127,0.25)');
+            root.style.setProperty('--active-accent-mid', 'rgba(0,255,127,0.6)');
+            root.style.setProperty('--active-dim',        'rgba(0,255,127,0.1)');
+            submitBtn.style.background = '#00ff7f';
+          } else {
+            root.style.setProperty('--active-accent',     '#bf00ff');
+            root.style.setProperty('--active-glow',       'rgba(191,0,255,0.55)');
+            root.style.setProperty('--active-glow-wide',  'rgba(191,0,255,0.15)');
+            root.style.setProperty('--active-glow-soft',  'rgba(191,0,255,0.25)');
+            root.style.setProperty('--active-accent-mid', 'rgba(191,0,255,0.6)');
+            root.style.setProperty('--active-dim',        'rgba(191,0,255,0.1)');
+            submitBtn.style.background = '#bf00ff';
+          }
+        }
+
+        function setMode(newMode) {
+          mode = newMode;
+          message.className = 'message';
+          emailInput.value  = '';
+          passInput.value   = '';
+
+          if (mode === 'signup') {
+            applyTheme('green');
+            tabSignup.classList.add('active');
+            tabLogin.classList.remove('active');
+            subtitle.textContent    = 'Create an account to get started';
+            submitBtn.textContent   = 'Sign Up';
+            footerText.textContent  = 'Already have an account? ';
+            footerLink.textContent  = 'Log in instead';
+          } else {
+            applyTheme('purple');
+            tabLogin.classList.add('active');
+            tabSignup.classList.remove('active');
+            subtitle.textContent    = 'Welcome back';
+            submitBtn.textContent   = 'Log In';
+            footerText.textContent  = "Don't have an account? ";
+            footerLink.textContent  = 'Sign up instead';
+          }
+        }
+
+        tabSignup.addEventListener('click', () => setMode('signup'));
+        tabLogin.addEventListener('click',  () => setMode('login'));
+        footerLink.addEventListener('click', (e) => {
+          e.preventDefault();
+          setMode(mode === 'signup' ? 'login' : 'signup');
+        });
 
         function showMessage(text, type) {
           message.textContent = text;
-          message.className = `message ${type}`;
+          message.className   = `message ${type}`;
         }
 
-        signupBtn.addEventListener('click', async () => {
+        submitBtn.addEventListener('click', async () => {
           const email    = emailInput.value.trim();
           const password = passInput.value;
 
@@ -232,25 +339,36 @@
             return;
           }
 
-          signupBtn.disabled = true;
-          signupBtn.textContent = 'Signing up…';
+          submitBtn.disabled    = true;
+          submitBtn.textContent = mode === 'signup' ? 'Signing up…' : 'Logging in…';
 
-          const { error } = await supabaseClient.auth.signUp({ email, password });
+          if (mode === 'signup') {
+            const { error } = await supabaseClient.auth.signUp({ email, password });
+            if (error) {
+              showMessage(error.message, 'error');
+              submitBtn.disabled    = false;
+              submitBtn.textContent = 'Sign Up';
+            } else {
+              showMessage('Account created! Redirecting…', 'success');
+              setTimeout(() => { window.location.href = 'index.html'; }, 2000);
+            }
 
-          if (error) {
-            showMessage(error.message, 'error');
-            signupBtn.disabled = false;
-            signupBtn.textContent = 'Sign Up';
           } else {
-            showMessage('Account created! Redirecting…', 'success');
-            setTimeout(() => { window.location.href = 'index.html'; }, 2000);
+            const { error } = await supabaseClient.auth.signInWithPassword({ email, password });
+            if (error) {
+              showMessage(error.message, 'error');
+              submitBtn.disabled    = false;
+              submitBtn.textContent = 'Log In';
+            } else {
+              showMessage('Logged in! Redirecting…', 'success');
+              setTimeout(() => { window.location.href = 'index.html'; }, 2000);
+            }
           }
         });
 
-        /* Allow Enter key to submit */
         [emailInput, passInput].forEach(el => {
           el.addEventListener('keydown', (e) => {
-            if (e.key === 'Enter') signupBtn.click();
+            if (e.key === 'Enter') submitBtn.click();
           });
         });
       });
