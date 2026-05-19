@@ -8,17 +8,6 @@
           'https://pnmgmhlyclemuyfkqaai.supabase.co',
           'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6InBubWdtaGx5Y2xlbXV5ZmtxYWFpIiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzgyNDgwMTEsImV4cCI6MjA5MzgyNDAxMX0.6pL1l4NBCUt8AVRO6sVpLpf9TNIAoON5A-ArWbddA0Y'
       );
-     // Check if user is logged in
-async function checkAuth() {
-    const { data: { user } } = await supabaseClient.auth.getUser();
-    
-    if (!user) {
-        // No user logged in — redirect to signup
-        window.location.href = 'signup.html';
-    }
-    
-    return user;
-}
 
 // Run the auth check when page loads
 let currentUser = null;
@@ -682,6 +671,17 @@ document.addEventListener('DOMContentLoaded', async () => {
           if (error) { console.log(error); alert('Error deleting note'); return; }
           loadNotes();
         }
+          // Check if user is logged in
+async function checkAuth() {
+    const { data: { user } } = await supabaseClient.auth.getUser();
+    
+    if (!user) {
+        // No user logged in — redirect to signup
+        window.location.href = 'signup.html';
+    }
+    
+    return user;
+}
 
         /* ─── Parse tags from any format Supabase might return ─── */
         function parseTags(raw) {
@@ -709,7 +709,14 @@ document.addEventListener('DOMContentLoaded', async () => {
             .replace(/>/g,'&gt;').replace(/"/g,'&quot;');
         }
 
+        // Check auth first, then load notes if logged in
+let currentUser = null;
+(async () => {
+    currentUser = await checkAuth();
+    if (currentUser) {
         loadNotes();
+    }
+})();
       });
     </script>
   </body>
