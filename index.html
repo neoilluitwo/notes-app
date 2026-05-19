@@ -430,9 +430,56 @@ document.addEventListener('DOMContentLoaded', async () => {
         .input-block { max-width: 100%; }
         header h1 { font-size: 1.8rem; }
       }
+
+      /* ── Logout button ── */
+      #logout-btn {
+        position: fixed;
+        top: 14px;
+        right: 14px;
+        z-index: 9999;
+        width: 36px;
+        height: 36px;
+        padding: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: transparent;
+        border: 1.5px solid var(--page-border-color);
+        border-radius: 8px;
+        cursor: pointer;
+        transition: background 0.2s ease, box-shadow 0.2s ease, transform 0.15s ease;
+        box-shadow: 0 0 6px color-mix(in srgb, var(--page-border-color) 40%, transparent);
+      }
+      #logout-btn:hover {
+        background: color-mix(in srgb, var(--page-border-color) 12%, transparent);
+        box-shadow: 0 0 14px color-mix(in srgb, var(--page-border-color) 65%, transparent);
+        transform: translateY(-1px);
+      }
+      #logout-btn:active { transform: scale(0.95); }
+      #logout-btn svg {
+        display: block;
+        stroke: var(--page-border-color);
+        fill: none;
+        filter: drop-shadow(0 0 3px color-mix(in srgb, var(--page-border-color) 80%, transparent));
+      }
     </style>
   </head>
   <body>
+    <!-- Logout button — fixed top-right, inherits random page border color -->
+    <button id="logout-btn" title="Log out" aria-label="Log out">
+      <!-- Open door with exit arrow SVG -->
+      <svg width="20" height="20" viewBox="0 0 20 20" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <!-- Door frame -->
+        <path d="M8 3H4a1 1 0 0 0-1 1v12a1 1 0 0 0 1 1h4"/>
+        <!-- Door panel (ajar) -->
+        <path d="M8 3l5 1.5v11L8 17"/>
+        <!-- Door knob -->
+        <circle cx="11.5" cy="10" r="0.9" stroke-width="1.2"/>
+        <!-- Arrow exiting to the right -->
+        <path d="M13 10h4m-2-2 2 2-2 2"/>
+      </svg>
+    </button>
+
     <div class="page-wrapper">
 
       <header><h1>My Notes</h1></header>
@@ -507,6 +554,12 @@ document.addEventListener('DOMContentLoaded', async () => {
         const editContent  = document.getElementById('edit-content');
         const editSaveBtn  = document.getElementById('edit-save-btn');
         const editCancelBtn= document.getElementById('edit-cancel-btn');
+
+        /* ─── Logout ─── */
+        document.getElementById('logout-btn').addEventListener('click', async () => {
+          await supabaseClient.auth.signOut();
+          window.location.href = 'signup.html';
+        });
 
         /* ─── New-note dropdown ─── */
         let dropdownOpen = false;
