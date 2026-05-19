@@ -601,7 +601,7 @@ document.addEventListener('DOMContentLoaded', async () => {
           const tags = noteTags.value.split(',').map(t => t.trim()).filter(Boolean);
           if (!content) { noteContent.focus(); return; }
 
-          const { error } = await supabaseClient.from('notes').insert({ content, tags });
+          const { error } = await supabaseClient.from('notes').insert({ content, tags, user_id: currentUser.id });
           if (error) { console.log(error); return; }
 
           noteContent.value = '';
@@ -683,7 +683,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         /* ─── Load notes ─── */
         async function loadNotes() {
           const { data: notes, error } = await supabaseClient
-            .from('notes').select('*').order('created_at', { ascending: false });
+            .from('notes').select('*').eq('user_id', currentUser.id).order('created_at', { ascending: false });
 
           if (error) { console.log(error); return; }
 
